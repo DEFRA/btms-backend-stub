@@ -33,4 +33,4 @@ FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 EXPOSE 8085
-ENTRYPOINT ["dotnet", "BtmsBackendStub.dll"]
+ENTRYPOINT ["dotnet", "Defra.BtmsBackendStub.dll"]
