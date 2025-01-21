@@ -38,17 +38,17 @@ public class WireMockHostedService(IOptions<BtmsStubOptions> options, ILogger<Wi
         _wireMockServer?.StubImportNotificationUpdates();
 
         _wireMockServer?.StubSingleImportNotification(chedReferenceNumber: ChedReferenceNumbers.ChedA);
-        _wireMockServer?.StubSingleImportNotification(chedReferenceNumber: ChedReferenceNumbers.ChedD);
         _wireMockServer?.StubSingleImportNotification(chedReferenceNumber: ChedReferenceNumbers.ChedP);
         _wireMockServer?.StubSingleImportNotification(chedReferenceNumber: ChedReferenceNumbers.ChedPP);
-
         _wireMockServer?.StubSingleImportNotification(shouldFail: true, chedReferenceNumber: "CHEDA.GB.2024.fail");
 
-        // The following are linked, ChedAWithMovement has relations for Movement1 and Movement2 allowing
-        // the full import notification to be retrieved
+        // The following CHEDs are linked to movements
         _wireMockServer?.StubSingleImportNotification(chedReferenceNumber: ChedReferenceNumbers.ChedAWithMovement);
         _wireMockServer?.StubSingleMovement(mrn: MovementReferenceNumbers.Movement1);
         _wireMockServer?.StubSingleMovement(mrn: MovementReferenceNumbers.Movement2);
+        
+        _wireMockServer?.StubSingleImportNotification(chedReferenceNumber: ChedReferenceNumbers.ChedDWithMovement);
+        _wireMockServer?.StubSingleMovement(mrn: MovementReferenceNumbers.Movement3);
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
