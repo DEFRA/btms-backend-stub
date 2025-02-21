@@ -1,52 +1,98 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 using Defra.BtmsBackendStub;
 using Microsoft.AspNetCore.Http;
+using WireMock;
 using WireMock.RequestBuilders;
 using WireMock.ResponseBuilders;
 using WireMock.Server;
+using WireMock.Types;
+using WireMock.Util;
 
 namespace Defra.BtmsBackendStub;
 
 [ExcludeFromCodeCoverage]
 public static class WireMockExtensions
 {
-    public static void StubSingleImportNotification(
-        this WireMockServer wireMock,
-        bool shouldFail = false,
-        string chedReferenceNumber = ChedReferenceNumbers.ChedA,
-        Func<IRequestBuilder, IRequestBuilder>? transformRequest = null,
-        Func<JsonNode, JsonNode>? transformResponse = null
+    private const string WireMockWildcard = "*";
+    
+    public static void StubSingleImportNotifications(
+        this WireMockServer wireMock
     )
     {
-        var code = shouldFail ? StatusCodes.Status500InternalServerError : StatusCodes.Status200OK;
-        var response = Response.Create().WithStatusCode(code);
+        var request = Request.Create()
+            .WithPath(Endpoints.ImportNotifications.Get(WireMockWildcard))
+            .UsingGet();
 
-        if (!shouldFail)
-        {
-            var responseBody = GetBody($"btms-import-notification-single-{chedReferenceNumber}.json");
-            if (transformResponse is not null)
-                responseBody = transformResponse(JsonNode.Parse(responseBody)!).ToJsonString();
+        wireMock.Given(request)
+            .RespondWith(Response.Create()
+            .WithCallback(req =>
+            {
+                var chedReferenceNumber = req.PathSegments.Last();
+                try
+                {
+                    var body = GetBody($"btms-import-notification-single-{chedReferenceNumber}.json");
+                    return CreateJson200Ok(body);
+                }
+                catch (InvalidOperationException _)
+                {
+                    return CreateJson404NotFound();
+                }
+            }));
+    }
+    
+    public static void StubSingleMovements(
+        this WireMockServer wireMock
+    )
+    {
+        var request = Request.Create()
+            .WithPath(Endpoints.Movements.Get(WireMockWildcard))
+            .UsingGet();
 
-            response = response.WithBody(responseBody);
-        }
-
-        var request = Request.Create().WithPath(Endpoints.ImportNotifications.Get(chedReferenceNumber)).UsingGet();
-
-        if (transformRequest is not null)
-            request = transformRequest(request);
-
-        wireMock.Given(request).RespondWith(response);
+        wireMock.Given(request)
+            .RespondWith(Response.Create()
+                .WithCallback(req =>
+                {
+                    var mrn = req.PathSegments.Last();
+                    try
+                    {
+                        var body = GetBody($"btms-movement-single-{mrn}.json");
+                        return CreateJson200Ok(body);
+                    }
+                    catch (InvalidOperationException _)
+                    {
+                        return CreateJson404NotFound();
+                    }
+                }));
     }
 
-    public static void StubImportNotificationUpdates(
-        this WireMockServer wireMock,
+    private static ResponseMessage CreateJson200Ok(string body) => new()
+    {
+        Headers = new Dictionary<string, WireMockList<string>>
+        {
+            { "Content-Type", "application/json" },
+        },
+        BodyData = new BodyData { DetectedBodyType = BodyType.String, BodyAsString = body },
+        StatusCode = StatusCodes.Status200OK
+    };
+    
+    private static ResponseMessage CreateJson404NotFound() => new()
+    {
+        StatusCode = StatusCodes.Status404NotFound
+    };
+    
+    private static ResponseMessage CreateJson500ServerError() => new()
+    {
+        StatusCode = StatusCodes.Status404NotFound
+    };
+
+    public static void StubImportNotificationUpdates( this WireMockServer wireMock,
         bool shouldFail = false,
         Func<JsonNode, JsonNode>? transformBody = null,
         string? path = null,
         Func<IRequestBuilder, IRequestBuilder>? transformRequest = null,
-        int? statusCode = null
-    )
+        int? statusCode = null)
     {
         var code = statusCode ?? (shouldFail ? StatusCodes.Status500InternalServerError : StatusCodes.Status200OK);
         var response = Response.Create().WithStatusCode(code);
@@ -68,27 +114,6 @@ public static class WireMockExtensions
         }
 
         var request = Request.Create().WithPath(path ?? Endpoints.ImportNotifications.Get()).UsingGet();
-
-        if (transformRequest is not null)
-            request = transformRequest(request);
-
-        wireMock.Given(request).RespondWith(response);
-    }
-
-    public static void StubSingleMovement(
-        this WireMockServer wireMock,
-        bool shouldFail = false,
-        string mrn = MovementReferenceNumbers.Movement1,
-        Func<IRequestBuilder, IRequestBuilder>? transformRequest = null
-    )
-    {
-        var code = shouldFail ? StatusCodes.Status500InternalServerError : StatusCodes.Status200OK;
-        var response = Response.Create().WithStatusCode(code);
-
-        if (!shouldFail)
-            response = response.WithBody(GetBody($"btms-movement-single-{mrn}.json"));
-
-        var request = Request.Create().WithPath(Endpoints.Movements.Get(mrn)).UsingGet();
 
         if (transformRequest is not null)
             request = transformRequest(request);
