@@ -36,19 +36,8 @@ public class WireMockHostedService(IOptions<BtmsStubOptions> options, ILogger<Wi
     {
         // NB. import notifications returned by the following do not exist in the stub and will 404
         _wireMockServer?.StubImportNotificationUpdates();
-
-        _wireMockServer?.StubSingleImportNotification(chedReferenceNumber: ChedReferenceNumbers.ChedA);
-        _wireMockServer?.StubSingleImportNotification(chedReferenceNumber: ChedReferenceNumbers.ChedP);
-        _wireMockServer?.StubSingleImportNotification(chedReferenceNumber: ChedReferenceNumbers.ChedPP);
-        _wireMockServer?.StubSingleImportNotification(shouldFail: true, chedReferenceNumber: "CHEDA.GB.2024.fail");
-
-        // The following CHEDs are linked to movements
-        _wireMockServer?.StubSingleImportNotification(chedReferenceNumber: ChedReferenceNumbers.ChedAWithMovement);
-        _wireMockServer?.StubSingleMovement(mrn: MovementReferenceNumbers.Movement1);
-        _wireMockServer?.StubSingleMovement(mrn: MovementReferenceNumbers.Movement2);
-        
-        _wireMockServer?.StubSingleImportNotification(chedReferenceNumber: ChedReferenceNumbers.ChedDWithMovement);
-        _wireMockServer?.StubSingleMovement(mrn: MovementReferenceNumbers.Movement3);
+        _wireMockServer?.StubSingleMovements();
+        _wireMockServer!.StubSingleImportNotifications();
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
@@ -56,7 +45,6 @@ public class WireMockHostedService(IOptions<BtmsStubOptions> options, ILogger<Wi
         if (_wireMockServer is not null)
         {
             _wireMockServer.Stop();
-
             logger.LogInformation("Stopped");
         }
 
