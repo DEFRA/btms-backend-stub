@@ -34,10 +34,18 @@ public class WireMockHostedService(IOptions<BtmsStubOptions> options, ILogger<Wi
 
     private void ConfigureStubbedData()
     {
+        if (_wireMockServer is null) return;
+        
         // NB. import notifications returned by the following do not exist in the stub and will 404
-        _wireMockServer?.StubImportNotificationUpdates();
-        _wireMockServer?.StubSingleMovements();
-        _wireMockServer!.StubSingleImportNotifications();
+        _wireMockServer.StubImportNotificationUpdates();
+        _wireMockServer.StubAllMovements();
+        _wireMockServer.StubAllGmrs();
+        _wireMockServer.StubAllImportNotifications();
+        
+        // Example failures
+        _wireMockServer.StubSingleMovement(shouldFail: true, mrn: "24GBCUDNXBN1JNRTP1");
+        _wireMockServer.StubSingleGmr(shouldFail: true, gmrId: "GMRA00KBHTP1");
+        _wireMockServer.StubSingleImportNotification(shouldFail: true, chedReferenceNumber: "CHEDA.GB.2024.4792TP1");
     }
 
     public Task StopAsync(CancellationToken cancellationToken)

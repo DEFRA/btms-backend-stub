@@ -1,7 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Nodes;
-using System.Text.RegularExpressions;
-using Defra.BtmsBackendStub;
 using Microsoft.AspNetCore.Http;
 using WireMock;
 using WireMock.RequestBuilders;
@@ -15,84 +13,44 @@ namespace Defra.BtmsBackendStub;
 [ExcludeFromCodeCoverage]
 public static class WireMockExtensions
 {
-    private const string WireMockWildcard = "*";
-    
-    public static void StubSingleImportNotifications(
-        this WireMockServer wireMock
+    private static Type Anchor => typeof(WireMockExtensions);
+
+    public static void StubSingleImportNotification(
+        this WireMockServer wireMock,
+        bool shouldFail = false,
+        string chedReferenceNumber = "",
+        Func<IRequestBuilder, IRequestBuilder>? transformRequest = null,
+        Func<JsonNode, JsonNode>? transformResponse = null
     )
     {
-        var request = Request.Create()
-            .WithPath(Endpoints.ImportNotifications.Get(WireMockWildcard))
-            .UsingGet();
+        var code = shouldFail ? StatusCodes.Status500InternalServerError : StatusCodes.Status200OK;
+        var response = Response.Create().WithStatusCode(code);
 
-        wireMock.Given(request)
-            .RespondWith(Response.Create()
-            .WithCallback(req =>
-            {
-                var chedReferenceNumber = req.PathSegments.Last();
-                try
-                {
-                    var body = GetBody($"btms-import-notification-single-{chedReferenceNumber}.json");
-                    return CreateJson200Ok(body);
-                }
-                catch (InvalidOperationException _)
-                {
-                    return CreateJson404NotFound();
-                }
-            }));
-    }
-    
-    public static void StubSingleMovements(
-        this WireMockServer wireMock
-    )
-    {
-        var request = Request.Create()
-            .WithPath(Endpoints.Movements.Get(WireMockWildcard))
-            .UsingGet();
-
-        wireMock.Given(request)
-            .RespondWith(Response.Create()
-                .WithCallback(req =>
-                {
-                    var mrn = req.PathSegments.Last();
-                    try
-                    {
-                        var body = GetBody($"btms-movement-single-{mrn}.json");
-                        return CreateJson200Ok(body);
-                    }
-                    catch (InvalidOperationException _)
-                    {
-                        return CreateJson404NotFound();
-                    }
-                }));
-    }
-
-    private static ResponseMessage CreateJson200Ok(string body) => new()
-    {
-        Headers = new Dictionary<string, WireMockList<string>>
+        if (!shouldFail)
         {
-            { "Content-Type", "application/json" },
-        },
-        BodyData = new BodyData { DetectedBodyType = BodyType.String, BodyAsString = body },
-        StatusCode = StatusCodes.Status200OK
-    };
-    
-    private static ResponseMessage CreateJson404NotFound() => new()
-    {
-        StatusCode = StatusCodes.Status404NotFound
-    };
-    
-    private static ResponseMessage CreateJson500ServerError() => new()
-    {
-        StatusCode = StatusCodes.Status404NotFound
-    };
+            var responseBody = GetBody($"btms-import-notification-single-{chedReferenceNumber}.json");
+            if (transformResponse is not null)
+                responseBody = transformResponse(JsonNode.Parse(responseBody)!).ToJsonString();
 
-    public static void StubImportNotificationUpdates( this WireMockServer wireMock,
+            response = response.WithBody(responseBody);
+        }
+
+        var request = Request.Create().WithPath(Endpoints.ImportNotifications.Get(chedReferenceNumber)).UsingGet();
+
+        if (transformRequest is not null)
+            request = transformRequest(request);
+
+        wireMock.Given(request).RespondWith(response);
+    }
+
+    public static void StubImportNotificationUpdates(
+        this WireMockServer wireMock,
         bool shouldFail = false,
         Func<JsonNode, JsonNode>? transformBody = null,
         string? path = null,
         Func<IRequestBuilder, IRequestBuilder>? transformRequest = null,
-        int? statusCode = null)
+        int? statusCode = null
+    )
     {
         var code = statusCode ?? (shouldFail ? StatusCodes.Status500InternalServerError : StatusCodes.Status200OK);
         var response = Response.Create().WithStatusCode(code);
@@ -121,12 +79,87 @@ public static class WireMockExtensions
         wireMock.Given(request).RespondWith(response);
     }
 
+    public static void StubSingleMovement(
+        this WireMockServer wireMock,
+        bool shouldFail = false,
+        string mrn = "",
+        Func<IRequestBuilder, IRequestBuilder>? transformRequest = null
+    )
+    {
+        var code = shouldFail ? StatusCodes.Status500InternalServerError : StatusCodes.Status200OK;
+        var response = Response.Create().WithStatusCode(code);
+
+        if (!shouldFail)
+            response = response.WithBody(GetBody($"btms-movement-single-{mrn}.json"));
+
+        var request = Request.Create().WithPath(Endpoints.Movements.Get(mrn)).UsingGet();
+
+        if (transformRequest is not null)
+            request = transformRequest(request);
+
+        wireMock.Given(request).RespondWith(response);
+    }
+
+    public static void StubSingleGmr(
+        this WireMockServer wireMock,
+        bool shouldFail = false,
+        string gmrId = "",
+        Func<IRequestBuilder, IRequestBuilder>? transformRequest = null
+    )
+    {
+        var code = shouldFail ? StatusCodes.Status500InternalServerError : StatusCodes.Status200OK;
+        var response = Response.Create().WithStatusCode(code);
+
+        if (!shouldFail)
+            response = response.WithBody(GetBody($"btms-goods-movement-single-{gmrId}.json"));
+
+        var request = Request.Create().WithPath(Endpoints.Gmrs.Get(gmrId)).UsingGet();
+
+        if (transformRequest is not null)
+            request = transformRequest(request);
+
+        wireMock.Given(request).RespondWith(response);
+    }
+
+    public static void StubAllGmrs(this WireMockServer wireMock)
+    {
+        foreach (var gmrId in GetAllStubGmrs())
+            wireMock.StubSingleGmr(gmrId: gmrId);
+    }
+
+    public static void StubAllMovements(this WireMockServer wireMock)
+    {
+        foreach (var movementId in GetAllStubMovementIds())
+            wireMock.StubSingleMovement(mrn: movementId);
+    }
+
+    public static void StubAllImportNotifications(this WireMockServer wireMock)
+    {
+        foreach (var chedReferenceNumber in GetAllStubChedReferenceNumbers())
+            wireMock.StubSingleImportNotification(chedReferenceNumber: chedReferenceNumber);
+    }
+
+    private static IEnumerable<string> GetAllStubChedReferenceNumbers() =>
+        Anchor
+            .Assembly.GetManifestResourceNames()
+            .Where(x => x.StartsWith($"{GetScenarioPrefix()}btms-import-notification-single-"))
+            .Select(x => x.Replace($"{GetScenarioPrefix()}btms-import-notification-single-", "").Replace(".json", ""));
+
+    private static IEnumerable<string> GetAllStubMovementIds() =>
+        Anchor
+            .Assembly.GetManifestResourceNames()
+            .Where(x => x.StartsWith($"{GetScenarioPrefix()}btms-movement-single-"))
+            .Select(x => x.Replace($"{GetScenarioPrefix()}btms-movement-single-", "").Replace(".json", ""));
+
+    private static IEnumerable<string> GetAllStubGmrs() =>
+        Anchor
+            .Assembly.GetManifestResourceNames()
+            .Where(x => x.StartsWith($"{GetScenarioPrefix()}btms-goods-movement-single-"))
+            .Select(x => x.Replace($"{GetScenarioPrefix()}btms-goods-movement-single-", "").Replace(".json", ""));
+
     private static string GetBody(string fileName)
     {
-        var type = typeof(WireMockExtensions);
-        var assembly = type.Assembly;
-
-        using var stream = assembly.GetManifestResourceStream($"{type.Namespace}.Scenarios.{fileName}");
+        using var stream = Anchor.Assembly.GetManifestResourceStream($"{GetScenarioPrefix()}{fileName}");
 
         if (stream is null)
             throw new InvalidOperationException($"Unable to find embedded resource {fileName}");
@@ -135,4 +168,6 @@ public static class WireMockExtensions
 
         return reader.ReadToEnd();
     }
+
+    private static string GetScenarioPrefix() => $"{Anchor.Namespace}.Scenarios.";
 }
