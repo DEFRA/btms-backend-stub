@@ -1,50 +1,86 @@
-# btms-backend-stub
+# Defra BTMS Backend Stub
 
-Core delivery C# ASP.NET backend template.
+This service provides stubbed responses for specific BTMS requests.
 
-* [Install MongoDB](#install-mongodb)
-* [Inspect MongoDB](#inspect-mongodb)
-* [Testing](#testing)
-* [Running](#running)
-* [Dependabot](#dependabot)
+## Prerequisites
 
-### Install MongoDB
-- Install [MongoDB](https://www.mongodb.com/docs/manual/tutorial/#installation) on your local machine
-- Start MongoDB:
-```bash
-sudo mongod --dbpath ~/mongodb-cdp
+The solution requires:
+
+- .NET 9
+
+  ```bash
+  brew tap isen-ng/dotnet-sdk-versions
+  brew install --cask dotnet-sdk9
+  ```
+
+- Docker
+
+## Installation
+
+1. Clone this repository
+2. Install the required tools with `dotnet tool restore`
+3. Check the solution builds with `dotnet build`
+4. Check the service builds with `docker build .`
+
+## Running
+
+1. Run the application via Docker:
+   ```
+   docker build -t btms-backend-stub .
+   docker run -p 8085:8085 btms-backend-stub
+   ```
+2. Navigate to http://localhost:8085
+
+## Responses
+
+See the Scenarios folder for all available responses. Examples are as follows:
+
+Get import notification updates (see [Utility Endpoints](#utility-endpoints)):
+```http request
+http://localhost:8085/api/import-notifications
 ```
 
-### Inspect MongoDB
-
-To inspect the Database and Collections locally:
-```bash
-mongosh
+Get individual import notification:
+```http request
+http://localhost:8085/api/import-notifications/CHEDA.GB.2024.4792831
 ```
 
-### Testing
-
-Run the tests with:
-
-Tests run by running a full `WebApplication` backed by [Ephemeral MongoDB](https://github.com/asimmon/ephemeral-mongo).
-Tests do not use mocking of any sort and read and write from the in-memory database.
-
-```bash
-dotnet test
-````
-
-### Running
-
-Run CDP-Deployments application:
-```bash
-dotnet run --project BtmsBackendStub --launch-profile Development
+Get individual movement:
+```http request
+http://localhost:8085/api/movements/24GBCUDNXBN1JNRAR5
 ```
 
-### SonarCloud
+Get individual goods movement:
+```http request
+http://localhost:8085/api/gmrs/GMRA00KBHFE0
+```
 
-Example SonarCloud configuration are available in the GitHub Action workflows.
+## Utility Endpoints
 
-### Dependabot
+A utility endpoint has been provided that will generate the import notification updates content based on the import notifications available in the Scenarios folder. Please use this if you want to update the stub response for import notification updates.
+```http request
+http://localhost:8085/utility/import-notification-updates
+```
 
-We have added an example dependabot configuration file to the repository. You can enable it by renaming
-the [.github/example.dependabot.yml](.github/example.dependabot.yml) to `.github/dependabot.yml`
+Copy the output and save it over [btms-import-notification-updates.json](src/BtmsBackendStub/Scenarios/btms-import-notification-updates.json).
+
+## Development
+
+Any new scenarios should be added to the Scenarios folder and they will be included automatically.
+
+Scenarios requiring specific configuration in code should be registered in the `WireMockHostedService`.
+
+## Testing
+
+Run the service via Docker and test the output is as expected.
+
+# Linting
+
+We use [CSharpier](https://csharpier.com) to lint our code.
+
+You can run the linter with `dotnet csharpier .`
+
+## License
+
+This project is licensed under The Open Government Licence (OGL) Version 3.  
+See the [LICENSE](./LICENSE) for more details.
