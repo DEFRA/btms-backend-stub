@@ -35,7 +35,7 @@ The solution requires:
 
 See the Scenarios folder for all available responses. Examples are as follows:
 
-Get import notification updates:
+Get import notification updates (see [Utility Endpoints](#utility-endpoints)):
 ```http request
 http://localhost:8085/api/import-notifications
 ```
@@ -54,6 +54,15 @@ Get individual goods movement:
 ```http request
 http://localhost:8085/api/gmrs/GMRA00KBHFE0
 ```
+
+## Utility Endpoints
+
+A utility endpoint has been provided that will generate the import notification updates content based on the import notifications available in the Scenarios folder. Please use this if you want to update the stub response for import notification updates.
+```http request
+http://localhost:8085/utility/import-notification-updates
+```
+
+Copy the output and save it over [btms-import-notification-updates.json](src/BtmsBackendStub/Scenarios/btms-import-notification-updates.json).
 
 ## Development
 

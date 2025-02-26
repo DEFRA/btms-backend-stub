@@ -139,6 +139,30 @@ public static class WireMockExtensions
             wireMock.StubSingleImportNotification(chedReferenceNumber: chedReferenceNumber);
     }
 
+    public static void StubUtilityEndpoints(this WireMockServer wireMock)
+    {
+        var data = GetAllStubChedReferenceNumbers().Select(x => new
+        {
+            type = "import-notifications",
+            id = x,
+            attributes = new { updatedEntity = DateTime.UtcNow.ToString("O"), referenceNumber = x },
+            links = new { self = $"/api/import-notifications/{x}" }
+        }).ToList();
+
+        wireMock.Given(Request.Create()
+                .WithPath("/utility/import-notification-updates")
+                .UsingGet())
+            .RespondWith(Response.Create()
+                .WithStatusCode(StatusCodes.Status200OK)
+                .WithBodyAsJson(
+                    new
+                    {
+                        links = new { self = "/api/import-notifications", first = "/api/import-notifications" },
+                        data,
+                        meta = new { total = data.Count }
+                    }, indented: true));
+    }
+
     private static IEnumerable<string> GetAllStubChedReferenceNumbers() =>
         Anchor
             .Assembly.GetManifestResourceNames()
